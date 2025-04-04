@@ -16,8 +16,8 @@ linked_accounts = db["linked_accounts"]  # Collection for linked accounts
 @app.route('/addbankdetails', methods=['POST'])
 def create_bankrec():
     data = request.json
-    user_id = bank_accounts_collection.insert_one(data)
-    return jsonify({"id": str(user_id.inserted_id), "message": "User created successfully"}), 201
+    bank_accounts_collection.insert_one(data)
+    return jsonify({ "message": "User created successfully"}), 201
 
 
 
