@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>Welcome to Your Dashboard</h1>
+        <div class="balance" id="balanceContainer">
+            <p>Your Current Balance: <span id="balance">$0.00</span></p>
+        </div>
+        <button id="showBalance">Show Balance</button>
+        <button id="makeTransaction">Make a Transaction</button>
+        <button id="logout">Logout</button>
+    </div>
+
+    <script>
+        document.getElementById('showBalance').addEventListener('click', async function () {
+            const loggedInAccount = JSON.parse(localStorage.getItem('loggedInAccount'));
+
+            if (!loggedInAccount || !loggedInAccount.mobile_number) {
+                alert('No logged-in account found or mobile number is missing.');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/get_balance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ mobile_number: loggedInAccount["mobile_number"], password: loggedInAccount["password"] }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    const balanceContainer = document.getElementById('balanceContainer');
+                    document.getElementById('balance').textContent = `${result.balance} `;
+                    balanceContainer.style.display = 'block'; // Show balance
+                } else {
+                    alert(result.error || 'Failed to fetch balance. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while fetching the balance. Please try again.');
+            }
+        });
+
+        document.getElementById('makeTransaction').addEventListener('click', function () {
+            window.location.href = 'transaction.html'; // Redirect to transaction page
+        });
+
+        document.getElementById('logout').addEventListener('click', function () {
+            alert('You have been logged out.');
+            localStorage.removeItem('loggedInAccount');
+            window.location.href = 'index.html'; // Redirect to login page
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Make a Transaction</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="transaction-container">
+        <h1>Make a Transaction</h1>
+        <form id="transactionForm">
+            <input type="text" id="recipientName" placeholder="Recipient's Account Name" required>
+            <input type="number" id="amount" placeholder="Enter amount to transfer" required>
+            <select id="country" required>
+                <option value="" disabled selected>Select destination country</option>
+                <option value="USD">United States</option>
+                <option value="EUR">Eurozone</option>
+                <option value="INR">India</option>
+                <option value="GBP">United Kingdom</option>
+                <option value="AUD">Australia</option>
+            </select>
+            <button type="submit">Convert and Confirm</button>
+        </form>
+        <div id="conversionResult" style="margin-top: 20px; display: none;">
+            <p>Converted Amount: <span id="convertedAmount"></span></p>
+            <p>Transaction Fee: <span id="transactionFee"></span></p>
+            <p>AI Analysis: <span id="aiAnalysis"></span></p>
+            <div class="button-group">
+                <button id="confirmTransaction">Confirm</button>
+                <button id="cancelTransaction">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'c7b0693eccc77fa3780be487'; // Replace with your API key
+
+        document.getElementById('recipientName').addEventListener('input', function () {
+            const recipientName = document.getElementById('recipientName').value;
+            const accounts = JSON.parse(localStorage.getItem('accounts')) || [];
+            const recipientAccount = accounts.find(acc => acc.username === recipientName);
+
+            if (recipientAccount) {
+                document.getElementById('country').value = recipientAccount.country;
+                document.getElementById('country').disabled = true; // Disable country selection
+            } else {
+                document.getElementById('country').disabled = false; // Enable country selection
+                document.getElementById('country').value = ""; // Reset the country selection
+            }
+        });
+
+        document.getElementById('transactionForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const recipientName = document.getElementById('recipientName').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const destinationCountry = document.getElementById('country').value;
+
+            if (amount <= 0) {
+                alert('Please enter a valid amount.');
+                return;
+            }
+
+            const account = JSON.parse(localStorage.getItem('loggedInAccount'));
+            if (!account) {
+                alert('No account found. Please log in.');
+                window.location.href = 'index.html';
+                return;
+            }
+
+            if (account.balance < amount) {
+                alert('Insufficient balance!');
+                return;
+            }
+
+            // Set transaction fee to 0.05 for all countries
+            const transactionFee = 0.05;
+
+            // Fetch conversion rate
+            try {
+                const response = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${account.country}/${destinationCountry}/${amount}`);
+                const data = await response.json();
+
+                if (data.result !== 'success') {
+                    alert('Failed to fetch conversion rate. Please try again.');
+                    return;
+                }
+
+                const convertedAmount = data.conversion_result;
+                document.getElementById('convertedAmount').textContent = `${convertedAmount.toFixed(2)} ${destinationCountry}`;
+                document.getElementById('transactionFee').textContent = `${transactionFee.toFixed(2)} ${account.country}`;
+
+                // AI Analysis: Check if the transaction is profitable or a loss
+                const profitOrLoss = convertedAmount - amount - transactionFee;
+                const aiAnalysis = profitOrLoss > 0 ? 'Profitable' : 'Loss';
+                document.getElementById('aiAnalysis').textContent = aiAnalysis;
+
+                document.getElementById('conversionResult').style.display = 'block';
+
+                // Handle confirmation
+                document.getElementById('confirmTransaction').onclick = async function () {
+                    const totalDeduction = amount + transactionFee;
+
+                    if (account.balance < totalDeduction) {
+                        alert('Insufficient balance to cover the transaction and fees!');
+                        return;
+                    }
+
+                    account.balance -= totalDeduction;
+
+                    // Check if recipient exists
+                    const accounts = JSON.parse(localStorage.getItem('accounts')) || [];
+                    const recipientAccount = accounts.find(acc => acc.username === recipientName);
+
+                    if (recipientAccount) {
+                        // Convert to recipient's currency
+                        const recipientResponse = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/pair/${account.country}/${recipientAccount.country}/${amount}`);
+                        const recipientData = await recipientResponse.json();
+
+                        if (recipientData.result === 'success') {
+                            const recipientConvertedAmount = recipientData.conversion_result;
+                            recipientAccount.balance += recipientConvertedAmount;
+
+                            // Update recipient account in localStorage
+                            const recipientIndex = accounts.findIndex(acc => acc.username === recipientName);
+                            if (recipientIndex !== -1) {
+                                accounts[recipientIndex] = recipientAccount;
+                                localStorage.setItem('accounts', JSON.stringify(accounts));
+                            }
+
+                            alert(`Transaction successful! ${amount.toFixed(2)} ${account.country} transferred to ${recipientName} in ${recipientAccount.country}. Transaction fee: ${transactionFee.toFixed(2)} ${account.country}.`);
+                        } else {
+                            alert('Failed to convert amount for the recipient. Transaction completed without adding to recipient balance.');
+                        }
+                    } else {
+                        alert(`Transaction successful! ${amount.toFixed(2)} ${account.country} transferred to ${recipientName} in ${destinationCountry}. Transaction fee: ${transactionFee.toFixed(2)} ${account.country}.`);
+                    }
+
+                    // Update sender account in localStorage
+                    const senderIndex = accounts.findIndex(acc => acc.username === account.username);
+                    if (senderIndex !== -1) {
+                        accounts[senderIndex] = account;
+                        localStorage.setItem('accounts', JSON.stringify(accounts));
+                    }
+
+                    window.location.href = 'dashboard.html';
+                };
+
+                // Handle cancellation
+                document.getElementById('cancelTransaction').onclick = function () {
+                    document.getElementById('conversionResult').style.display = 'none';
+                };
+            } catch (error) {
+                alert('An error occurred while fetching conversion rates. Please try again.');
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

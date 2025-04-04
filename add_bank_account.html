@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Bank Account</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Add Your Bank Account</h1>
+        <button id="addBankAccount">Add Your Bank Account</button>
+        <button id="logout">Logout</button>
+        <div id="statusMessage" style="margin-top: 20px; font-size: 16px; color: #333;"></div>
+    </div>
+
+    <script>
+        document.getElementById('addBankAccount').addEventListener('click', async function () {
+            const loggedInAccount = JSON.parse(localStorage.getItem('loggedInAccount'));
+
+            if (!loggedInAccount || !loggedInAccount.mobile_number) {
+                alert('No logged-in account found or mobile number is missing.');
+                return;
+            }
+
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.textContent = `Verifying your mobile number "${loggedInAccount.mobile_number}" with the bank...`;
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/link_bank_account', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: loggedInAccount.username,
+                        mobile_number: loggedInAccount.mobile_number,
+                        password: loggedInAccount.password,
+                    }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusMessage.textContent = 'Verified! Redirecting to the dashboard...';
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 2000);
+                } else {
+                    statusMessage.textContent = 'Not Verified. ' + (result.error || 'Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                statusMessage.textContent = 'An error occurred while verifying. Please try again.';
+            }
+        });
+
+        document.getElementById('logout').addEventListener('click', function () {
+            alert('You have been logged out.');
+            localStorage.removeItem('loggedInAccount');
+            window.location.href = 'index.html';
+        });
+    </script>
+</body>
+</html>

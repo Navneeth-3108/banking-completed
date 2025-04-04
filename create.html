@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="create-account-container">
+        <h1>Create Account</h1>
+        <form id="createAccountForm">
+            <input type="text" id="username" placeholder="Username" required>
+            <input type="email" id="email" placeholder="Email Address" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+            <input type="text" id="mobileNumber" placeholder="Mobile Number" required>
+            <select id="country" required>
+                <option value="" disabled selected>Select your country</option>
+                <option value="USD">United States</option>
+                <option value="EUR">Eurozone</option>
+                <option value="INR">India</option>
+                <option value="GBP">United Kingdom</option>
+                <option value="AUD">Australia</option>
+            </select>
+            <button type="submit">Create Account</button>
+        </form>
+        <div class="back-to-login">
+            <a href="index.html">Back to Login</a>
+        </div>
+    </div>
+    <script>
+        document.getElementById('createAccountForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const mobileNumber = document.getElementById('mobileNumber').value;
+            const country = document.getElementById('country').value;
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            const accountDetails = { username, email, password, mobile_number: mobileNumber, country };
+
+            try {
+                // Send data to the backend API
+                const response = await fetch('http://127.0.0.1:5000/adduserdetail', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(accountDetails),
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert(result.message);
+                    window.location.href = 'index.html';
+                } else {
+                    alert(result.error || 'Failed to create account. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while creating the account. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>
